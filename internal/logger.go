@@ -30,5 +30,10 @@ func (l *Logger) Info(message string) {
 
 //Error ...
 func (l *Logger) Error(err error, message string) {
-	l.logger.Println("ERROR: " + message + " | err: " + err.Error())
+	finalMsg := "ERROR: "
+	if message != "" {
+		finalMsg += "msg: " + message + " | err: "
+	}
+	finalMsg += err.Error()
+	l.logger.Println(finalMsg)
 }

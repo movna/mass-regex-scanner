@@ -1,3 +1,3 @@
-module github.com/movna/mass-regex-scanner
+module github.com/movna/mres
 
 go 1.14

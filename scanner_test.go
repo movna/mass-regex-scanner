@@ -1,4 +1,4 @@
-package scanner
+package mres
 
 import (
 	"context"
@@ -6,16 +6,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/movna/mass-regex-scanner/internal"
+	"github.com/movna/mres/internal"
 )
 
 func getTestScanner(t *testing.T, folders []string) *Scanner {
-	config := Config{
-		FoldersToScan: folders,
-		Expressions:   []RegExp{{ID: "id1", Expression: "token"}, {ID: "id2", Expression: "token)("}},
-		WorkerCount:   2,
-	}
-	scanner, err := NewScanner(config)
+	exps := Expressions{}
+	scanner, err := NewScanner(exps)
 	if err != nil {
 		t.Errorf("error while setting up scanner. err: %v", err)
 		t.FailNow()
@@ -52,7 +48,7 @@ func TestScanner_Scan(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := getTestScanner(t, tt.args.folders)
-			got, got1 := s.Scan(tt.args.ctx)
+			got, got1 := s.Scan(tt.args.ctx, []string{}, 1)
 			if !reflect.DeepEqual(got, tt.want) { // TODO: better way to assert
 				t.Errorf("Scanner.Scan() got = %v, want %v", got, tt.want)
 			}

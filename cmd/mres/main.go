@@ -74,7 +74,8 @@ func parseCliOptions() (*cliOptions, error) {
 	// flags
 	//configPathPtr := flag.String("config", "", "Relative or absolute path to the config file")
 	pathPtr := flag.String("path", "", "Relative or absolute path of the folder or a file to scan")
-	regexStrPtr := flag.String("regex", "", "Regular Expression")
+	fileFilterRegexStrPtr := flag.String("filefilter", "", "This is a regex supported flag which can be used to filter files with specific extensions or in specific subpath relative to the given path")
+	contentRegexStrPtr := flag.String("regex", "", "Regular Expression")
 	resultDumpPathPtr := flag.String("out", "", "Relative or absolute path to the dump the results. The results will be written in JSON format. If a value is not specified, the results will be written to Stdout.")
 	workerCountPtr := flag.Int("workers", 2, "Number of workers. Increase it if you are scanning through large number of files and complex regular expressions.")
 	flag.Parse()
@@ -82,29 +83,48 @@ func parseCliOptions() (*cliOptions, error) {
 		log.Info("Invalid path value specified. Check help by using -help option.")
 		return nil, errInvalidCliOptions
 	}
-	if *regexStrPtr == "" {
-		log.Info("Invalid regex value specified. Check help by using -help option.")
+	fileFilterEnabled := false
+	if *fileFilterRegexStrPtr != "" {
+		fileFilterEnabled = true
+	}
+	contentFilterEnabled := false
+	if *contentRegexStrPtr != "" {
+		contentFilterEnabled = true
+	}
+	if !fileFilterEnabled && !contentFilterEnabled {
+		log.Info("Specify either -filefilter or -regex or both. Check help by using -help option.")
 		return nil, errInvalidCliOptions
 	}
-	/*
-		there is not much use setting beyond this. file regex scanning is both disk io and cpu bound. if there are
-		large volume of files but a simple regex - the operation is highly bounded by disk io and if the files are of
-		low volume but the regexes are complex - the operation is highly bounded by cpu
-	*/
 	workerCount := *workerCountPtr
 	if workerCount < 1 {
 		workerCount = 1
 	}
-	cliOptions := &cliOptions{
-		mresExpressions: mres.Expressions{
-			ContentMatchExps: []mres.ContentMatchExp{
-				{ID: "cli", Exp: *regexStrPtr, FileFilterEnabled: false, FileFilterExp: ""},
+	mresExp := mres.Expressions{}
+	switch {
+	case contentFilterEnabled:
+		mresExp.ContentMatchExps = []mres.ContentMatchExp{
+			{
+				ID:                "cli",
+				Exp:               *contentRegexStrPtr,
+				FileFilterEnabled: fileFilterEnabled,
+				FileFilterExp:     *fileFilterRegexStrPtr,
 			},
-		},
-		foldersToScan:  []string{*pathPtr},
-		workerCount:    workerCount,
-		outputToFile:   *resultDumpPathPtr != "",
-		outputFilePath: *resultDumpPathPtr,
+		}
+	case fileFilterEnabled && !contentFilterEnabled:
+		mresExp.FileMatchExps = []mres.FileMatchExp{
+			{
+				ID:  "cli",
+				Exp: *fileFilterRegexStrPtr,
+			},
+		}
+
+	}
+	cliOptions := &cliOptions{
+		mresExpressions: mresExp,
+		foldersToScan:   []string{*pathPtr},
+		workerCount:     workerCount,
+		outputToFile:    *resultDumpPathPtr != "",
+		outputFilePath:  *resultDumpPathPtr,
 	}
 	return cliOptions, nil
 }

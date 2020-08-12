@@ -56,7 +56,7 @@ func (s *Scanner) ScanWithCallback(
 	if workerCount < 1 {
 		workerCount = 1
 	}
-	jobsC := make(chan string, workerCount*5)
+	jobsC := make(chan string, workerCount*10)
 	fmResultC := make(chan FileMatchResult, workerCount)
 	cmResultsC := make(chan ContentMatchResult, workerCount)
 	errorsC := make(chan error, workerCount)
@@ -194,6 +194,18 @@ func (s *Scanner) worker(
 			if !ok {
 				return
 			}
+			// TODO: move this logic to an another file
+			// TODO: line number, content sample, multiple matches on same file
+			if len(s.fileMatchers) > 0 {
+				for _, exp := range s.fileMatchers {
+					if exp.Exp.Match([]byte(filePath)) {
+						fmResultC <- FileMatchResult{RegExpID: exp.ID, FilePath: filePath}
+					}
+				}
+			}
+			if len(s.contentMatchers) == 0 {
+				continue
+			}
 			fp, err := os.Open(filePath)
 			if err != nil {
 				errorsC <- err
@@ -205,13 +217,6 @@ func (s *Scanner) worker(
 			if err != nil {
 				errorsC <- err
 				continue
-			}
-			// TODO: move this logic to an another file
-			// TODO: line number, content sample, multiple matches on same file
-			for _, exp := range s.fileMatchers {
-				if exp.Exp.Match([]byte(filePath)) {
-					fmResultC <- FileMatchResult{RegExpID: exp.ID, FilePath: filePath}
-				}
 			}
 			for _, exp := range s.contentMatchers {
 				if exp.FileFilterEnabled && !exp.FileFilterExp.Match([]byte(filePath)) {

@@ -6,12 +6,26 @@ The project is work in progress...
 ### Usage
 `Warning:` It works but not complete...
 
-#### Steps
+#### Setup
 
 1. `git clone https://github.com/movna/mres`
 2. `cd mres/cmd/mres`
 3. `go build`
-4. `./mres -path <folder_path> -regex <exp> -workers <no_of_workers>`
+
+#### Options
+
+To scan all files in the folder (`-path`) for the specified regular expression (`-regex`)
+
+`./mres -path <folder_path> -regex <exp> -workers <no_of_workers>`
+
+To filter (`-filefilter`) and scan for files in the folder (`-path`) for the specified regular expression (`-regex`)
+
+`./mres -path <folder_path> -filefilter <exp> -regex <exp> -workers <no_of_workers>`
+
+To filter (`-filefilter`) and list files that match the `-filefilter` expression for files in the folder (`-path`)
+
+`./mres -path <folder_path> -filefilter <exp> -workers <no_of_workers>`
+
 
 ### Inspiration
 I am learning Golang and thought building something like this is best use and test of what I am learning - specially on Goroutines.

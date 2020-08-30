@@ -2,16 +2,47 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"time"
 
 	"github.com/movna/mres"
+	"github.com/movna/mres/internal"
 )
 
+var (
+	log                  = internal.NewDefaultLogger()
+	errInvalidCliOptions = errors.New("invalid cli options")
+)
+
+type cliOptions struct {
+	mresExpressions mres.Expressions
+	foldersToScan   []string
+	workerCount     int
+	outputToFile    bool
+	outputFilePath  string
+}
+
+func printRuntimeStats() {
+	go func() {
+		for {
+			ms := runtime.MemStats{}
+			runtime.ReadMemStats(&ms)
+			stack := float64(ms.StackInuse) / float64(1024*1024)
+			heap := float64(ms.HeapInuse) / float64(1024*1024)
+			memObtained := float64(ms.Sys) / float64(1024*1024)
+			log.Debug(fmt.Sprintf("Goroutines: %d Stack: %.2fmB Heap: %.2fmB MemObtained: %.2fmB", runtime.NumGoroutine(), stack, heap, memObtained))
+			time.Sleep(time.Second * 1)
+		}
+	}()
+}
+
 func main() {
+	printRuntimeStats()
 	Run()
 }
 
@@ -44,13 +75,13 @@ func Run() {
 	onFileMatchResult := func(r mres.FileMatchResult) {
 		fmResultsCount++
 		if !cliOptions.outputToFile {
-			log.Info(fmt.Sprintf("File match - id: %s filepath: %s", r.RegExpID, r.FilePath))
+			log.Info(fmt.Sprintf("File match - id: %s, filepath: %s", r.ExpID, r.FilePath))
 		}
 	}
 	onContentMatchResult := func(r mres.ContentMatchResult) {
 		cmResultsCount++
 		if !cliOptions.outputToFile {
-			log.Info(fmt.Sprintf("Content match - id: %s filepath: %s", r.RegExpID, r.FilePath))
+			log.Info(fmt.Sprintf("Content match - id: %s, filepath: %s, lineno: %d, match: %s", r.ExpID, r.FilePath, r.LineNumber, r.MatchString))
 		}
 	}
 	onError := func(e error) {
@@ -74,8 +105,8 @@ func parseCliOptions() (*cliOptions, error) {
 	// flags
 	//configPathPtr := flag.String("config", "", "Relative or absolute path to the config file")
 	pathPtr := flag.String("path", "", "Relative or absolute path of the folder or a file to scan")
-	fileFilterRegexStrPtr := flag.String("filefilter", "", "This is a regex supported flag which can be used to filter files with specific extensions or in specific subpath relative to the given path")
-	contentRegexStrPtr := flag.String("regex", "", "Regular Expression")
+	fileRegexStrPtr := flag.String("file", "", "This is a regex supported flag which can be used to filter files with specific extensions or in specific subpath relative to the given path")
+	contentRegexStrPtr := flag.String("content", "", "Regular Expression")
 	resultDumpPathPtr := flag.String("out", "", "Relative or absolute path to the dump the results. The results will be written in JSON format. If a value is not specified, the results will be written to Stdout.")
 	workerCountPtr := flag.Int("workers", 2, "Number of workers. Increase it if you are scanning through large number of files and complex regular expressions.")
 	flag.Parse()
@@ -84,7 +115,7 @@ func parseCliOptions() (*cliOptions, error) {
 		return nil, errInvalidCliOptions
 	}
 	fileFilterEnabled := false
-	if *fileFilterRegexStrPtr != "" {
+	if *fileRegexStrPtr != "" {
 		fileFilterEnabled = true
 	}
 	contentFilterEnabled := false
@@ -107,14 +138,16 @@ func parseCliOptions() (*cliOptions, error) {
 				ID:                "cli",
 				Exp:               *contentRegexStrPtr,
 				FileFilterEnabled: fileFilterEnabled,
-				FileFilterExp:     *fileFilterRegexStrPtr,
+				FileMatchExp: mres.FileMatchExp{
+					Exp: *fileRegexStrPtr,
+				},
 			},
 		}
 	case fileFilterEnabled && !contentFilterEnabled:
 		mresExp.FileMatchExps = []mres.FileMatchExp{
 			{
 				ID:  "cli",
-				Exp: *fileFilterRegexStrPtr,
+				Exp: *fileRegexStrPtr,
 			},
 		}
 

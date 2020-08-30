@@ -29,19 +29,19 @@ func TestScanner_Scan(t *testing.T) {
 	tests := []struct {
 		name  string
 		args  args
-		want  []Result
+		want  []MatchResult
 		want1 []error
 	}{
 		{
 			name:  "just try",
 			args:  args{ctx: context.TODO(), folders: []string{"./testdatazz"}},
-			want:  []Result{},
+			want:  []MatchResult{},
 			want1: []error{errors.New("lstat ./testdatazz: no such file or directory")}, // TODO: better way to assert
 		},
 		{
 			name:  "just try 2",
 			args:  args{ctx: context.TODO(), folders: []string{"./testdata"}},
-			want:  []Result{},
+			want:  []MatchResult{},
 			want1: []error{},
 		},
 	}

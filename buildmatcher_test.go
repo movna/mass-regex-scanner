@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func Test_compileFileMatchExps(t *testing.T) {
+func Test_buildFileMatchers(t *testing.T) {
 	type args struct {
 		exps []FileMatchExp
 	}
@@ -60,18 +60,18 @@ func Test_compileFileMatchExps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matchers, errs := compileFileMatchExps(tt.args.exps)
+			matchers, errs := buildFileMatchers(tt.args.exps)
 			if len(matchers) != tt.matchersLen {
-				t.Errorf("compileFileMatchExps() matchers = %v, want %v", len(matchers), tt.matchersLen)
+				t.Errorf("buildFileMatchers() matchers = %v, want %v", len(matchers), tt.matchersLen)
 			}
 			if len(errs) != tt.errorsLen {
-				t.Errorf("compileFileMatchExps() errs = %v, want %v", len(errs), tt.errorsLen)
+				t.Errorf("buildFileMatchers() errs = %v, want %v", len(errs), tt.errorsLen)
 			}
 		})
 	}
 }
 
-func Test_compileContentMatchExps(t *testing.T) {
+func Test_buildContentMatchers(t *testing.T) {
 	type args struct {
 		exps []ContentMatchExp
 	}
@@ -106,11 +106,11 @@ func Test_compileContentMatchExps(t *testing.T) {
 					newContentMatchExp("id6", true, "(?i)).go|.txt", "(?i)todo"),   // error in file filter but enabled - count
 					newContentMatchExp("id7", true, "(?i).go|.txt", "(?i))todo"),   // error in content filter - count
 					newContentMatchExp("id8", false, "(?i)).go|.txt", "(?i))todo"), // error in both but file filter disabled - count
-					newContentMatchExp("id9", true, "(?i)).go|.txt", "(?i))todo"),  // error in both - count
+					newContentMatchExp("id9", true, "(?i)).go|.txt", "(?i))todo"),  // error in both - count 2
 				},
 			},
 			matchersLen: 5,
-			errorsLen:   4,
+			errorsLen:   5,
 		},
 		{
 			name: "nil exps",
@@ -131,12 +131,12 @@ func Test_compileContentMatchExps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matchers, errs := compileContentMatchExps(tt.args.exps)
+			matchers, errs := buildContentMatchers(tt.args.exps)
 			if len(matchers) != tt.matchersLen {
-				t.Errorf("compileContentMatchExps() matchers = %v, want %v", len(matchers), tt.matchersLen)
+				t.Errorf("buildContentMatchers() matchers = %v, want %v", len(matchers), tt.matchersLen)
 			}
 			if len(errs) != tt.errorsLen {
-				t.Errorf("compileContentMatchExps() errs = %v, want %v", len(errs), tt.errorsLen)
+				t.Errorf("buildContentMatchers() errs = %v, want %v", len(errs), tt.errorsLen)
 			}
 		})
 	}
@@ -153,7 +153,9 @@ func newContentMatchExp(id string, fileFilter bool, fileFilterExp string, exp st
 	return ContentMatchExp{
 		ID:                id,
 		FileFilterEnabled: fileFilter,
-		FileFilterExp:     fileFilterExp,
-		Exp:               exp,
+		FileMatchExp: FileMatchExp{
+			Exp: fileFilterExp,
+		},
+		Exp: exp,
 	}
 }

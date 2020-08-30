@@ -58,15 +58,12 @@ func (matchers contentMatchers) matchAll(filePath string, bufPool []byte) ([]Con
 		lineNo++
 		content := scanner.Bytes()
 		for _, m := range applicableMatchers {
-			match := m.Exp.Match(content)
-			if match {
-				matches := m.Exp.FindAll(content, -1)
-				if len(matches) == 0 {
-					continue
-				}
-				for _, match := range matches {
-					results = append(results, ContentMatchResult{ExpID: m.ID, FilePath: filePath, LineNumber: lineNo, MatchString: string(match)})
-				}
+			matches := m.Exp.FindAll(content, -1)
+			if len(matches) == 0 {
+				continue
+			}
+			for _, match := range matches {
+				results = append(results, ContentMatchResult{ExpID: m.ID, FilePath: filePath, LineNumber: lineNo, MatchString: string(match)})
 			}
 		}
 	}
